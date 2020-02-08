@@ -94,5 +94,5 @@ media/
 venv/
 
 ### Verstka Nomer Tre ###
-downloader.py
+parser.py
 books/
