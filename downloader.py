@@ -68,6 +68,14 @@ def download_image(filename, book_id):
         file.write(response.content)
 
 
+def download_comments():
+    page, page_url = download_page()
+    soup = BeautifulSoup(page, 'lxml')
+    comments = soup.find_all('div', class_='texts')
+    for com in comments:
+        print(com.find('span').text)
+
+
 book_id = 12
 root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 books_dir = create_directory(root_dir, 'images')
