@@ -76,6 +76,14 @@ def download_comments():
         print(com.find('span').text)
 
 
+def fetch_genre():
+    page, page_url = download_page()
+    soup = BeautifulSoup(page, 'lxml')
+    links_to_genre = soup.find('span', class_='d_book').find_all('a')
+    genres = [genre.text for genre in links_to_genre]
+
+
+
 book_id = 12
 root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 books_dir = create_directory(root_dir, 'images')
