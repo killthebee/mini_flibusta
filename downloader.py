@@ -17,8 +17,8 @@ def download_txt(filename, book_id):
             file.write(response.text)
 
 
-def create_directory(root_dir):
-    books_dir = root_dir / 'books'
+def create_directory(root_dir, name):
+    books_dir = root_dir / name
     Path(books_dir).mkdir(exist_ok=True)
     return books_dir
 
@@ -34,19 +34,19 @@ def download_page(book_id):
     url = 'http://tululu.org/b%s/'%(book_id)
     response = requests.get(url)
     response.raise_for_status()
-    return response.text
+    return response.text, url
 
 
 def fetch_title_and_author(book_id):
-    page = download_page(book_id)
+    page, url = download_page(book_id)
     soup = BeautifulSoup(page, 'lxml')
     book_title, book_author = soup.find('h1').text.split('   ::   ')
     return book_title
 
 
-def make_filename(books_dir, book_id):
+def make_filename(books_dir, book_id, prefix):
     book_title = fetch_title_and_author(book_id)
-    sanitized_book_title = sanitize_filepath('%s.txt'%(book_title))
+    sanitized_book_title = sanitize_filepath('%s.%s'%(book_title, prefix))
     print('dir')
     print(books_dir)
     print('title')
@@ -56,15 +56,20 @@ def make_filename(books_dir, book_id):
     return filename
 
 
-def download_image():
-    page, page_url = download_page()
+def download_image(filename, book_id):
+    page, page_url = download_page(book_id)
     soup = BeautifulSoup(page, 'lxml')
     short_url = soup.find('div', class_="bookimage").find('img')['src']
     full_url = urljoin(page_url, short_url)
+    response = requests.get(full_url)
+    response.raise_for_status()
+
+    with open(filename, 'wb') as file:
+        file.write(response.content)
 
 
 book_id = 12
 root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-books_dir = create_directory(root_dir)
-filename = make_filename(books_dir, book_id)
-download_txt(filename, book_id)
+books_dir = create_directory(root_dir, 'images')
+filename = make_filename(books_dir, book_id, 'jpg')
+download_image(filename, book_id)
