@@ -3,6 +3,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 import os
 from pathvalidate import sanitize_filepath
+from urllib.parse import urljoin
 
 
 def download_txt(filename, book_id):
@@ -53,6 +54,13 @@ def make_filename(books_dir, book_id):
     filename = books_dir / sanitized_book_title
     print(filename)
     return filename
+
+
+def download_image():
+    page, page_url = download_page()
+    soup = BeautifulSoup(page, 'lxml')
+    short_url = soup.find('div', class_="bookimage").find('img')['src']
+    full_url = urljoin(page_url, short_url)
 
 
 book_id = 12
