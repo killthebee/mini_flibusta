@@ -4,88 +4,109 @@ from bs4 import BeautifulSoup
 import os
 from pathvalidate import sanitize_filepath
 from urllib.parse import urljoin
+import json
 
 
-def download_txt(filename, book_id):
+def download_txt(filepath, book_id):
     url = 'http://tululu.org/txt.php?id=%s'%(book_id)
 
     response = requests.get(url, allow_redirects=False)
     response.raise_for_status()
-    print(response)
-    if response.status_code != 302:
-        with open(filename, 'w') as file:
+    if response.status_code == 200:
+        with open(filepath, 'w') as file:
             file.write(response.text)
 
 
 def create_directory(root_dir, name):
-    books_dir = root_dir / name
-    Path(books_dir).mkdir(exist_ok=True)
-    return books_dir
+    dir_path = root_dir / name
+    dir_path.mkdir(exist_ok=True)
+    return dir_path
 
 
-def d_10():
-    frst_book_id = 32168
-    new_book_ids = [frst_book_id + add for add in range(0,10)]
-    for counter, book_id in enumerate(new_book_ids, 1):
-        download_book(book_id, counter)
-
-
-def download_page(book_id):
+def download_pagesoup(book_id):
     url = 'http://tululu.org/b%s/'%(book_id)
     response = requests.get(url)
     response.raise_for_status()
-    return response.text, url
+    soup = BeautifulSoup(response.text, 'lxml')
+    return soup
 
 
-def fetch_title_and_author(book_id):
-    page, url = download_page(book_id)
-    soup = BeautifulSoup(page, 'lxml')
-    book_title, book_author = soup.find('h1').text.split('   ::   ')
-    return book_title
+def make_filepath(path_to_dir, extension, book_title):
+    sanitized_book_title = sanitize_filepath('%s.%s'%(book_title, extension))
+    filepath = path_to_dir / sanitized_book_title
+    return filepath
 
 
-def make_filename(books_dir, book_id, prefix):
-    book_title = fetch_title_and_author(book_id)
-    sanitized_book_title = sanitize_filepath('%s.%s'%(book_title, prefix))
-    print('dir')
-    print(books_dir)
-    print('title')
-    print(sanitized_book_title)
-    filename = books_dir / sanitized_book_title
-    print(filename)
-    return filename
-
-
-def download_image(filename, book_id):
-    page, page_url = download_page(book_id)
-    soup = BeautifulSoup(page, 'lxml')
+def download_image(soup, filepath, book_id):
+    page_url = 'http://tululu.org/b%s/'%(book_id)
     short_url = soup.find('div', class_="bookimage").find('img')['src']
     full_url = urljoin(page_url, short_url)
     response = requests.get(full_url)
     response.raise_for_status()
 
-    with open(filename, 'wb') as file:
+    with open(filepath, 'wb') as file:
         file.write(response.content)
 
 
-def download_comments():
+def download_comments(soup):
     page, page_url = download_page()
     soup = BeautifulSoup(page, 'lxml')
     comments = soup.find_all('div', class_='texts')
     for com in comments:
         print(com.find('span').text)
-
+    comments = [comment.find('span').text for comment in soup.find_all('div', class_='texts')]
 
 def fetch_genre():
     page, page_url = download_page()
     soup = BeautifulSoup(page, 'lxml')
     links_to_genre = soup.find('span', class_='d_book').find_all('a')
-    genres = [genre.text for genre in links_to_genre]
+    genres = [genre.text for genre in soup.find('span', class_='d_book').find_all('a')]
 
 
+def fetch_book_ids():
+    #urls = ['http://tululu.org/l55/%s'%(page) for page in range(1,4)]
+    urls = ['http://tululu.org/l55/1']
+    book_ids = []
+    for url in urls:
+        response = requests.get(url)
+        response.raise_for_status()
 
-book_id = 12
-root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-books_dir = create_directory(root_dir, 'images')
-filename = make_filename(books_dir, book_id, 'jpg')
-download_image(filename, book_id)
+        soup = BeautifulSoup(response.text, 'lxml')
+        book_cards = soup.find_all('table', class_='d_book')
+        for card in book_cards:
+            book_short_url = card.find('a')['href']
+            book_id = book_short_url[2:]
+            book_ids.append(book_id)
+
+    return book_ids
+
+
+def main():
+    root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    books_dir_path = create_directory(root_dir, 'books')
+    images_dir_path = create_directory(root_dir, 'images')
+
+    books_info = []
+    book_ids = fetch_book_ids()
+    for book_id in book_ids:
+        soup = download_pagesoup(book_id)
+        book_title, book_author = soup.find('h1').text.split('   ::   ')
+        text_filepath = make_filepath(books_dir_path, 'txt', book_title)
+        download_txt(text_filepath, book_id)
+
+        img_filepath = make_filepath(images_dir_path, 'jpg', book_title)
+        download_image(soup, img_filepath, book_id)
+
+        comments = [comment.find('span').text for comment in soup.find_all('div', class_='texts')]
+        genres = [genre.text for genre in soup.find('span', class_='d_book').find_all('a')]
+        book_info ={
+            "title": book_title,
+             "author": book_author,
+            "img_src": img_filepath,
+            "book_path": text_filepath,
+            "comments": comments,
+            "genres": genres,
+        }
+        books_info.append(book_info)
+    #TODO: make json dump
+main()
