@@ -9,6 +9,7 @@ import argparse
 
 
 def download_txt(filepath, book_id):
+    
     url = 'http://tululu.org/txt.php?id=%s'%(book_id)
 
     response = requests.get(url, allow_redirects=False)
@@ -19,12 +20,14 @@ def download_txt(filepath, book_id):
 
 
 def create_directory(root_dir, name):
+    
     dir_path = root_dir / name
     dir_path.mkdir(exist_ok=True)
     return dir_path
 
 
 def download_pagesoup(book_id):
+    
     url = 'http://tululu.org/b%s/'%(book_id)
     response = requests.get(url)
     response.raise_for_status()
@@ -33,6 +36,7 @@ def download_pagesoup(book_id):
 
 
 def make_filepath(path_to_dir, extension, book_title):
+    
     sanitized_book_title = sanitize_filepath('%s.%s'%(book_title, extension))
     filepath = path_to_dir / sanitized_book_title
     return filepath
