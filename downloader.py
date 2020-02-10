@@ -39,9 +39,9 @@ def make_filepath(path_to_dir, extension, book_title):
 
 
 def download_image(soup, filepath, book_id):
+
     page_url = 'http://tululu.org/b%s/'%(book_id)
-    img_selector = 'div.bookimage img'
-    short_url = soup.select_one(img_selector)['src']
+    short_url = soup.select_one('div.bookimage img')['src']
     full_url = urljoin(page_url, short_url)
     response = requests.get(full_url)
     response.raise_for_status()
@@ -51,24 +51,28 @@ def download_image(soup, filepath, book_id):
 
 
 def fetch_book_ids(start_page, end_page):
+
     urls = ['http://tululu.org/l55/%s'%(page) for page in range(start_page, end_page + 1)]
     book_ids = []
     for url in urls:
-        response = requests.get(url)
+        response = requests.get(url, allow_redirects=False)
         response.raise_for_status()
+        if response.status_code != 200:
+            break
 
         soup = BeautifulSoup(response.text, 'lxml')
-        book_cards_selector = 'table.d_book'
-        book_cards = soup.select(book_cards_selector)
+        book_cards = soup.select('table.d_book')
         for card in book_cards:
             book_short_url = card.select_one('a')['href']
-            book_id = book_short_url[2:]
+            start_of_book_id = 2
+            book_id = book_short_url[start_of_book_id:]
             book_ids.append(book_id)
 
     return book_ids
 
 
 def main():
+
     root_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     books_dir_path = create_directory(root_dir, 'books')
     images_dir_path = create_directory(root_dir, 'images')
@@ -91,10 +95,8 @@ def main():
         img_filepath = make_filepath(images_dir_path, 'jpg', book_title)
         download_image(soup, img_filepath, book_id)
 
-        comments_selector = 'div.texts span'
-        comments = [comment.text for comment in soup.select(comments_selector)]
-        genres_selector = 'span.d_book a'
-        genres = [genre.text for genre in soup.select(genres_selector)]
+        comments = [comment.text for comment in soup.select('div.texts span')]
+        genres = [genre.text for genre in soup.select('span.d_book a')]
 
         book_info ={
             "title": book_title,
