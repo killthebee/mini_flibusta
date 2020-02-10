@@ -5,6 +5,7 @@ import os
 from pathvalidate import sanitize_filepath
 from urllib.parse import urljoin
 import json
+import argparse
 
 
 def download_txt(filepath, book_id):
@@ -39,28 +40,14 @@ def make_filepath(path_to_dir, extension, book_title):
 
 def download_image(soup, filepath, book_id):
     page_url = 'http://tululu.org/b%s/'%(book_id)
-    short_url = soup.find('div', class_="bookimage").find('img')['src']
+    img_selector = 'div.bookimage img'
+    short_url = soup.select_one(img_selector)['src']
     full_url = urljoin(page_url, short_url)
     response = requests.get(full_url)
     response.raise_for_status()
 
     with open(filepath, 'wb') as file:
         file.write(response.content)
-
-
-def download_comments(soup):
-    page, page_url = download_page()
-    soup = BeautifulSoup(page, 'lxml')
-    comments = soup.find_all('div', class_='texts')
-    for com in comments:
-        print(com.find('span').text)
-    comments = [comment.find('span').text for comment in soup.find_all('div', class_='texts')]
-
-def fetch_genre():
-    page, page_url = download_page()
-    soup = BeautifulSoup(page, 'lxml')
-    links_to_genre = soup.find('span', class_='d_book').find_all('a')
-    genres = [genre.text for genre in soup.find('span', class_='d_book').find_all('a')]
 
 
 def fetch_book_ids(start_page, end_page):
@@ -92,20 +79,23 @@ def main():
     parser.add_argument('-s', '--start_page', help='Start page')
     parser.add_argument('-e', '--end_page', help='End page', default=100000)
     args = parser.parse_args()
-    book_ids = fetch_book_ids(args.start_page, args.end_page)
+    book_ids = fetch_book_ids(int(args.start_page), int(args.end_page))
 
     books_info = []
     for book_id in book_ids:
         soup = download_pagesoup(book_id)
-        book_title, book_author = soup.find('h1').text.split('   ::   ')
+        book_title, book_author = soup.select_one('h1').text.split('   ::   ')
+
         text_filepath = make_filepath(books_dir_path, 'txt', book_title)
         download_txt(text_filepath, book_id)
-
         img_filepath = make_filepath(images_dir_path, 'jpg', book_title)
         download_image(soup, img_filepath, book_id)
 
-        comments = [comment.find('span').text for comment in soup.find_all('div', class_='texts')]
-        genres = [genre.text for genre in soup.find('span', class_='d_book').find_all('a')]
+        comments_selector = 'div.texts span'
+        comments = [comment.text for comment in soup.select(comments_selector)]
+        genres_selector = 'span.d_book a'
+        genres = [genre.text for genre in soup.select(genres_selector)]
+
         book_info ={
             "title": book_title,
              "author": book_author,
@@ -120,4 +110,5 @@ def main():
         json.dump(books_info, file, ensure_ascii=False)
 
 
-main()
+if __name__ == "__main__":
+    main()
