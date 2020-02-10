@@ -63,18 +63,18 @@ def fetch_genre():
     genres = [genre.text for genre in soup.find('span', class_='d_book').find_all('a')]
 
 
-def fetch_book_ids():
-    #urls = ['http://tululu.org/l55/%s'%(page) for page in range(1,4)]
-    urls = ['http://tululu.org/l55/1']
+def fetch_book_ids(start_page, end_page):
+    urls = ['http://tululu.org/l55/%s'%(page) for page in range(start_page, end_page + 1)]
     book_ids = []
     for url in urls:
         response = requests.get(url)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'lxml')
-        book_cards = soup.find_all('table', class_='d_book')
+        book_cards_selector = 'table.d_book'
+        book_cards = soup.select(book_cards_selector)
         for card in book_cards:
-            book_short_url = card.find('a')['href']
+            book_short_url = card.select_one('a')['href']
             book_id = book_short_url[2:]
             book_ids.append(book_id)
 
@@ -86,8 +86,15 @@ def main():
     books_dir_path = create_directory(root_dir, 'books')
     images_dir_path = create_directory(root_dir, 'images')
 
+    parser = argparse.ArgumentParser(
+        description='Choose start and end page'
+    )
+    parser.add_argument('-s', '--start_page', help='Start page')
+    parser.add_argument('-e', '--end_page', help='End page', default=100000)
+    args = parser.parse_args()
+    book_ids = fetch_book_ids(args.start_page, args.end_page)
+
     books_info = []
-    book_ids = fetch_book_ids()
     for book_id in book_ids:
         soup = download_pagesoup(book_id)
         book_title, book_author = soup.find('h1').text.split('   ::   ')
