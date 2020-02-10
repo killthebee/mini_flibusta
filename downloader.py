@@ -102,11 +102,15 @@ def main():
         book_info ={
             "title": book_title,
              "author": book_author,
-            "img_src": img_filepath,
-            "book_path": text_filepath,
+            "img_src": str(img_filepath),
+            "book_path": str(text_filepath),
             "comments": comments,
             "genres": genres,
         }
         books_info.append(book_info)
-    #TODO: make json dump
+
+    with open('books_info.json', 'w') as file:
+        json.dump(books_info, file, ensure_ascii=False)
+
+
 main()
