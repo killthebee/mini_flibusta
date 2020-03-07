@@ -8,10 +8,13 @@ import json
 import argparse
 
 
-def download_txt(filepath, book_id):
-    url = 'http://tululu.org/txt.php?id=%s'%(book_id)
+TULULU_URL = 'http://tululu.org/'
 
-    response = requests.get(url, allow_redirects=False)
+
+def download_txt(filepath, book_id):
+    download_params = 'txt.php?id=%s'%(book_id)
+    download_url = urljoin(TULULU_URL, download_params)
+    response = requests.get(download_url, allow_redirects=False)
     response.raise_for_status()
     if response.status_code == 200:
         with open(filepath, 'w') as file:
@@ -25,8 +28,9 @@ def create_directory(root_dir, name):
 
 
 def download_pagesoup(book_id):
-    url = 'http://tululu.org/b%s/'%(book_id)
-    response = requests.get(url)
+    download_params = 'b%s/'%(book_id)
+    download_url = urljoin(TULULU_URL, download_params)
+    response = requests.get(download_url)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, 'lxml')
     return soup
@@ -39,10 +43,10 @@ def make_filepath(path_to_dir, extension, book_title):
 
 
 def download_image(soup, filepath, book_id):
-
-    page_url = 'http://tululu.org/b%s/'%(book_id)
+    download_params = 'b%s/' % (book_id)
+    download_url = urljoin(TULULU_URL, download_params)
     short_url = soup.select_one('div.bookimage img')['src']
-    full_url = urljoin(page_url, short_url)
+    full_url = urljoin(download_url, short_url)
     response = requests.get(full_url)
     response.raise_for_status()
 
@@ -51,8 +55,7 @@ def download_image(soup, filepath, book_id):
 
 
 def fetch_book_ids(start_page, end_page):
-
-    urls = ['http://tululu.org/l55/%s'%(page) for page in range(start_page, end_page + 1)]
+    urls = [urljoin(category_url, 'l55/%s'%(page)) for page in range(start_page, end_page + 1)]
     book_ids = []
     for url in urls:
         response = requests.get(url, allow_redirects=False)
