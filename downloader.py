@@ -28,7 +28,7 @@ def create_directory(root_dir, name):
 
 
 def download_pagesoup(book_id):
-    download_params = 'b%s/'%(book_id)
+    download_params = 'b%s'%(book_id)
     download_url = urljoin(TULULU_URL, download_params)
     response = requests.get(download_url)
     response.raise_for_status()
@@ -43,7 +43,7 @@ def make_filepath(path_to_dir, extension, book_title):
 
 
 def download_image(soup, filepath, book_id):
-    download_params = 'b%s/' % (book_id)
+    download_params = 'b%s' % (book_id)
     download_url = urljoin(TULULU_URL, download_params)
     short_url = soup.select_one('div.bookimage img')['src']
     full_url = urljoin(download_url, short_url)
